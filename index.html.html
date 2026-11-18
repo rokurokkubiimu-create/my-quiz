@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>信頼性工学 4択ランダムクイズアプリ</title>
+<style>
+  :root {
+    --primary: #1a5276;
+    --primary-light: #2980b9;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #2c3e50;
+    --border: #dce4ec;
+  }
+  body {
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 760px;
+    margin: 24px auto;
+    padding: 0 16px;
+    line-height: 1.6;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 1.5rem;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 10px;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 1.15rem;
+    color: var(--primary);
+    margin-top: 20px;
+  }
+  .stats-box {
+    background: #ebf5fb;
+    border-left: 4px solid var(--primary-light);
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .form-group {
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  select {
+    width: 100%;
+    max-width: 320px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #bdc3c7;
+    background: #fff;
+  }
+  .btn {
+    background: var(--primary-light);
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: var(--primary); }
+  .btn-secondary {
+    background: #7f8c8d;
+    font-size: 0.9rem;
+    padding: 8px 16px;
+  }
+  .btn-secondary:hover { background: #606c6d; }
+  .btn-danger {
+    background: #c0392b;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+  .btn-danger:hover { background: #962d22; }
+  .badge {
+    display: inline-block;
+    background: #e8f4f8;
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+  }
+  .question-text {
+    font-size: 1.15rem;
+    font-weight: bold;
+    margin: 18px 0 22px;
+  }
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  button.option-btn {
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text);
+  }
+  button.option-btn:hover:not(:disabled) {
+    background: #ebf5fb;
+    border-color: var(--primary-light);
+  }
+  button.option-btn.correct {
+    background: #d4efdf;
+    border-color: #27ae60;
+    color: #145a32;
+    font-weight: bold;
+  }
+  button.option-btn.wrong {
+    background: #fadbd8;
+    border-color: #e74c3c;
+    color: #78281f;
+  }
+  .explanation {
+    margin-top: 20px;
+    padding: 16px;
+    background: #fef9e7;
+    border-left: 4px solid #f1c40f;
+    border-radius: 6px;
+    display: none;
+  }
+  .controls {
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .data-manager {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px dashed #bdc3c7;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<!-- スタート画面 -->
+<div id="start-screen" class="card">
+  <h1>信頼性工学 4択ランダムクイズ</h1>
+  
+  <div class="stats-box">
+    <div>現在の総収録問題数： <strong id="total-count" style="font-size:1.2rem; color:#1a5276;">0</strong> 問</div>
+    <div id="chapter-breakdown" style="font-size:0.85rem; color:#555;"></div>
+  </div>
+
+  <div class="form-group">
+    <label for="category-select">出題範囲（章）を選択：</label>
+    <select id="category-select" onchange="updateAvailableCount()">
+      <option value="ALL">すべての章からランダム</option>
+      <option value="第5章">第5章：システムの信頼性と保全性</option>
+      <option value="第6章">第6章：信頼性試験と故障物理</option>
+      <option value="第7章">第7章：信頼性データ解析法</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="num-questions">出題数を選択：</label>
+    <select id="num-questions">
+      <option value="5">5問</option>
+      <option value="10" selected>10問</option>
+      <option value="20">20問</option>
+      <option value="30">30問</option>
+      <option value="50">50問</option>
+      <option value="100">100問</option>
+    </select>
+  </div>
+
+  <button class="btn" onclick="startQuiz()">クイズを開始する</button>
+
+  <!-- データ追加・管理エリア（2,000問拡張用） -->
+  <div class="data-manager">
+    <h2>問題データの追加（2,000問拡張用）</h2>
+    <p style="font-size:0.9rem; color:#555;">
+      追加の問題データ（JSON形式のテキスト）を貼り付けて「問題を追加」を押すと、ブラウザ内にデータが累積保存されます。
+    </p>
+    <textarea id="json-input" rows="4" style="width:100%; box-sizing:border-box; padding:8px; border-radius:6px; border:1px solid #ccc;" placeholder='[ {"category": "第5章", "question": "...", "options": ["A","B","C","D"], "answer": 0, "explanation": "..."} ]'></textarea>
+    <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="importQuestions()">問題を追加する</button>
+      <button class="btn btn-danger" onclick="resetDatabase()">初期データ（30問）にリセット</button>
+    </div>
+  </div>
+</div>
+
+<!-- クイズ出題画面 -->
+<div id="quiz-screen" class="card hidden">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <span class="badge" id="q-category">第5章</span>
+    <span id="q-progress" style="font-weight:bold; color:#666;">1 / 10</span>
+  </div>
+  <div class="question-text" id="q-text">問題文</div>
+  <div class="options" id="options-container"></div>
+  <div class="explanation" id="explanation-box"></div>
+  <div class="controls">
+    <span>現在の正解数: <strong id="current-score">0</strong></span>
+    <button id="next-btn" class="btn hidden" onclick="nextQuestion()">次の問題へ</button>
+  </div>
+</div>
+
+<!-- 結果発表画面 -->
+<div id="result-screen" class="card hidden">
+  <h1>結果発表</h1>
+  <p style="font-size:1.3rem;">
+    スコア: <strong id="final-score" style="color:#27ae60;">0</strong> / <span id="final-total">0</span> 問正解
+    （正答率: <strong id="final-percent">0</strong>%）
+  </p>
+  <div id="review-list" style="margin-top:20px;"></div>
+  <br>
+  <button class="btn" onclick="backToStart()">トップ画面に戻る</button>
+</div>
+
+<script>
+const defaultQuizData = [
+  {
+    category: "第5章",
+    question: "信頼度 R の要素を n 個直列に接続したシステムの信頼度を表す式はどれか。",
+    options: ["R^n", "1 - (1 - R)^n", "nR", "1 - R^n"],
+    answer: 0,
+    explanation: "直列システムはすべての要素が正常である必要があるため、各要素の信頼度の積 R^n となります。"
+  },
+  {
+    category: "第5章",
+    question: "信頼度 R の要素を2つ並列に接続した冗長システムの信頼度を表す式はどれか。",
+    options: ["1 - (1 - R)^2", "R^2", "2R - R^3", "1 - R^2"],
+    answer: 0,
+    explanation: "並列システムは「すべてが同時に故障しない限りシステムは正常」であるため、1 - (1 - R)^2 = 2R - R^2 となります。"
+  },
+  {
+    category: "第5章",
+    question: "3つの要素のうち2つ以上が正常であればシステムが機能する多数決冗長（2 out of 3）の信頼度の式はどれか。",
+    options: ["3R^2 - 2R^3", "R^3 + 3R(1-R)", "1 - (1-R)^3", "3R - 2R^2"],
+    answer: 0,
+    explanation: "3つすべて正常（R^3）と、2つ正常・1つ故障（3R^2(1-R)）の和となり、整理すると 3R^2 - 2R^3 になります。"
+  },
+  {
+    category: "第5章",
+    question: "故障率 λ の同じ要素2つからなる「並列冗長システム」の平均故障寿命（MTTF）は、単体（1/λ）の何倍になるか。",
+    options: ["1.5倍", "2倍", "3倍", "0.5倍"],
+    answer: 0,
+    explanation: "並列冗長（2要素）のMTTFは 1/λ + 1/(2λ) = 3/(2λ) となり、単体の1.5倍になります。"
+  },
+  {
+    category: "第5章",
+    question: "故障率 λ の同じ要素2つからなる「待機冗長システム（切替え完全）」の平均故障寿命（MTTF）は、単体（1/λ）の何倍になるか。",
+    options: ["2倍", "1.5倍", "3倍", "1倍"],
+    answer: 0,
+    explanation: "待機冗長では1台目が故障してから2台目が稼働するため、MTTFは単純な和となり 1/λ + 1/λ = 2/λ（2倍）になります。"
+  },
+  {
+    category: "第5章",
+    question: "故障が発生してから修理を行う保全方式はどれか。",
+    options: ["事後保全（BM）", "予防保全（PM）", "予知保全（CBM）", "改良保全（CM）"],
+    answer: 0,
+    explanation: "アイテムが故障した後に機能回復のために行う保全を事後保全（Breakdown Maintenance: BM）と呼びます。"
+  },
+  {
+    category: "第5章",
+    question: "アイテムの劣化状態を監視・診断し、故障の兆候を捉えてから行う保全方式はどれか。",
+    options: ["状態監視保全（予知保全：CBM）", "時間計画保全（TBM）", "事後保全（BM）", "日常保全"],
+    answer: 0,
+    explanation: "振動や温度などの状態監視データに基づいて実施する予防保全を状態監視保全（Condition Based Maintenance: CBM）と呼びます。"
+  },
+  {
+    category: "第5章",
+    question: "固有アベイラビリティ（Ai）の計算式として正しいものはどれか。",
+    options: ["MTBF / (MTBF + MTTR)", "MTTF / (MTTF + MDT)", "MTBM / (MTBM + MDT)", "MTTR / (MTBF + MTTR)"],
+    answer: 0,
+    explanation: "固有アベイラビリティ Ai は、予防保全や資材待ち時間を含まず、MTBFとMTTRのみを用いて MTBF / (MTBF + MTTR) で表されます。"
+  },
+  {
+    category: "第5章",
+    question: "平均故障間隔（MTBF）が990時間、平均修復時間（MTTR）が10時間のシステムの固有アベイラビリティはいくらか。",
+    options: ["0.99（99%）", "0.90（90%）", "0.98（98%）", "0.999（99.9%）"],
+    answer: 0,
+    explanation: "Ai = MTBF / (MTBF + MTTR) = 990 / (990 + 10) = 990 / 1000 = 0.99 となります。"
+  },
+  {
+    category: "第5章",
+    question: "単位時間あたりの平均故障発生数が一定（偶発故障期間）であるとき、一定期間内に発生する故障件数や必要な予備品数の確率分布として用いられるものはどれか。",
+    options: ["ポアソン分布", "ワイブル分布", "正規分布", "対数正規分布"],
+    answer: 0,
+    explanation: "稀に起こる事象（偶発故障など）の発生件数の分布にはポアソン分布が用いられます。"
+  },
+  {
+    category: "第6章",
+    question: "温度ストレスによる寿命の加速モデルとして広く用いられる「アレニウスの式」において、反応速度が比例する項はどれか。",
+    options: ["exp(-Ea / kT)", "exp(Ea / kT)", "T^n", "exp(-kT / Ea)"],
+    answer: 0,
+    explanation: "アレニウスの式では、反応速度は exp(-Ea / kT) に比例します（Ea：活性化エネルギー、k：ボルツマン定数、T：絶対温度）。"
+  },
+  {
+    category: "第6章",
+    question: "温度を10℃上げると寿命が半分になる（反応速度が2倍になる）という経験則を何というか。",
+    options: ["10℃則（アレニウス則の簡便則）", "アイリング則", "マイナー則", "コフィン・マンソン則"],
+    answer: 0,
+    explanation: "化学反応速度や絶縁劣化などで、温度が10℃上昇するごとに寿命が1/2になる経験則を10℃則と呼びます。"
+  },
+  {
+    category: "第6章",
+    question: "抜取り試験のOC曲線において、本来合格とすべき良いロット（AQL水準）を誤って不合格としてしまう確率を何というか。",
+    options: ["生産者危険（α）", "消費者危険（β）", "信頼水準（1-α）", "識別比"],
+    answer: 0,
+    explanation: "良いロットを誤って不合格にするリスクを「生産者危険（α）」と呼びます。"
+  },
+  {
+    category: "第6章",
+    question: "抜取り試験のOC曲線において、本来不合格とすべき悪いロット（LTPD水準）を誤って合格としてしまう確率を何というか。",
+    options: ["消費者危険（β）", "生産者危険（α）", "有意水準", "検出力"],
+    answer: 0,
+    explanation: "悪いロットを誤って合格にする消費者側のリスクを「消費者危険（β）」と呼びます。"
+  },
+  {
+    category: "第6章",
+    question: "金属配線に高密度の電流が流れることで、電子の衝突により金属原子が移動し断線やショートを引き起こす故障メカニズムはどれか。",
+    options: ["エレクトロマイグレーション（EM）", "ストレスマイグレーション（SM）", "TDDB（経時絶縁破壊）", "イオンマイグレーション"],
+    answer: 0,
+    explanation: "高電流密度の電子風力によって金属原子が移動する現象はエレクトロマイグレーション（EM）です。"
+  },
+  {
+    category: "第6章",
+    question: "電流を流していなくても、配線と周辺絶縁膜との熱膨張係数差による機械的応力（引張応力）によって金属原子が移動し断線に至る現象はどれか。",
+    options: ["ストレスマイグレーション（SM）", "エレクトロマイグレーション（EM）", "TDDB", "ホットキャリア注入"],
+    answer: 0,
+    explanation: "機械的ストレス（応力勾配）を駆動力として原子が拡散・移動しボイドを形成する現象がストレスマイグレーション（SM）です。"
+  },
+  {
+    category: "第6章",
+    question: "MOSトランジスタのゲート酸化膜などに電界がかかり続けることで、絶縁膜中に欠陥が蓄積し、最終的に絶縁破壊に至る現象はどれか。",
+    options: ["TDDB（経時絶縁破壊）", "EM（エレクトロマイグレーション）", "ESD（静電気放電）", "ラッチアップ"],
+    answer: 0,
+    explanation: "Time Dependent Dielectric Breakdown（経時絶縁破壊）は、電界印加時間の経過とともに絶縁膜が破壊される現象です。"
+  },
+  {
+    category: "第6章",
+    question: "半導体デバイスの故障解析において、レーザ照射による局所的な温度変化に伴う抵抗値変化を検出し、配線ショートやリーク箇所を特定する手法はどれか。",
+    options: ["OBIRCH", "EBSD", "EDS", "TEM"],
+    answer: 0,
+    explanation: "OBIRCH（Optical Beam Induced Resistance Change）は、レーザ加熱による抵抗変化を利用して不良箇所を特定する手法です。"
+  },
+  {
+    category: "第6章",
+    question: "ガリウム（Ga）などのイオンビームを細く絞って試料に照射し、任意箇所の断面加工や透過電子顕微鏡（TEM）用の薄片試料作製を行う装置はどれか。",
+    options: ["FIB（集束イオンビーム装置）", "SEM（走査型電子顕微鏡）", "EDS（エネルギー分散型X線分析）", "AFM（原子間力顕微鏡）"],
+    answer: 0,
+    explanation: "FIB（Focused Ion Beam）は、イオンビームによるスパッタリング現象を利用してピンポイントの断面加工や試料作製を行います。"
+  },
+  {
+    category: "第6章",
+    question: "電子線を試料に照射した際に発生する特性X線を検出し、微小領域の元素分析（組成分析）を行う手法はどれか。",
+    options: ["EDS（エネルギー分散型X線分析）", "OBIRCH", "EBSD", "エミッション顕微鏡"],
+    answer: 0,
+    explanation: "EDS（Energy Dispersive X-ray Spectroscopy）は、SEMやTEMと組み合わせて元素の種類と含有量を分析する手法です。"
+  },
+  {
+    category: "第7章",
+    question: "規定の試験時間または故障数に達した時点で試験を打ち切るため、試験終了時点でまだ故障していないアイテムのデータを含む信頼性データを何というか。",
+    options: ["打切りデータ（センサードデータ）", "完全データ", "フィールドデータ", "区間データ"],
+    answer: 0,
+    explanation: "未故障のアイテムが存在する状態で観測を終了したデータを打切りデータ（または不完全データ）と呼びます。"
+  },
+  {
+    category: "第7章",
+    question: "故障発生の順序（i番目）から累積故障率 F(ti) を推定する際、最も広く用いられる「メジアンランク」の近似式はどれか（総サンプル数を n とする）。",
+    options: ["(i - 0.3) / (n + 0.4)", "i / (n + 1)", "(i - 0.5) / n", "i / n"],
+    answer: 0,
+    explanation: "メジアンランクの近似式は (i - 0.3) / (n + 0.4) です。なお、i / (n + 1) は平均ランク（ミーンランク）の式です。"
+  },
+  {
+    category: "第7章",
+    question: "平均ランク（ミーンランク）法を用いて累積故障率 F(ti) を計算する式はどれか（i：故障順位、n：総サンプル数）。",
+    options: ["i / (n + 1)", "(i - 0.3) / (n + 0.4)", "(i - 0.5) / n", "(i - 1) / n"],
+    answer: 0,
+    explanation: "平均ランク（ミーンランク）法は i / (n + 1) で計算されます。"
+  },
+  {
+    category: "第7章",
+    question: "ワイブル確率紙にデータをプロットした際、直線の傾きから求められる「形状パラメータ m」が m > 1 を示す場合、どのような故障モードに該当するか。",
+    options: ["摩耗故障型（故障率増加型：IFR）", "初期故障型（故障率減少型：DFR）", "偶発故障型（故障率一定型：CFR）", "指数分布型"],
+    answer: 0,
+    explanation: "ワイブル分布の形状パラメータ m は、m < 1 で初期故障型、m = 1 で偶発故障型、m > 1 で摩耗故障型を示します。"
+  },
+  {
+    category: "第7章",
+    question: "ワイブル分布において、形状パラメータ m = 1 のとき、どの確率分布と一致するか。",
+    options: ["指数分布", "正規分布", "対数正規分布", "ポアソン分布"],
+    answer: 0,
+    explanation: "形状パラメータ m = 1 のワイブル分布は、故障率が一定の指数分布と完全に一致します。"
+  },
+  {
+    category: "第7章",
+    question: "ワイブル分布の「尺度パラメータ η（特性寿命）」は、累積故障率 F(t) が約何％になる時間に対応するか。",
+    options: ["約63.2%", "50.0%", "約36.8%", "90.0%"],
+    answer: 0,
+    explanation: "t = η を代入すると F(η) = 1 - exp(-1) ≒ 0.632（63.2%）となります。"
+  },
+  {
+    category: "第7章",
+    question: "途中打切りデータ（マルチセンサードデータ）が多く含まれる場合でも、累積ハザード率 H(t) を計算してプロットすることで簡単に分布パラメータを推定できる確率紙はどれか。",
+    options: ["累積ハザード紙", "正規確率紙", "二項確率紙", "対数正規確率紙"],
+    answer: 0,
+    explanation: "累積ハザード紙（ネルソン法）を用いると、途中に打切りデータがあってもランク計算をやり直すことなく簡単にプロットできます。"
+  },
+  {
+    category: "第7章",
+    question: "観測されたデータ分布が、仮定した理論分布（指数分布や正規分布など）に適合しているかを検定する手法として適切なものはどれか。",
+    options: ["カイ2乗検定（χ²検定）やK-S検定", "F検定", "t検定", "分散分析（ANOVA）"],
+    answer: 0,
+    explanation: "分布の適合度検定には、カイ2乗適合度検定やコルモゴロフ・スミルノフ検定（K-S検定）が用いられます。"
+  },
+  {
+    category: "第7章",
+    question: "製品の「強度」と使用環境から受ける「ストレス」がそれぞれ確率分布を持つとき、強度 ＜ ストレス となる確率から故障率を求める解析モデルはどれか。",
+    options: ["ストレス・強度モデル", "アレニウスモデル", "ワイブルモデル", "バスタブ曲線モデル"],
+    answer: 0,
+    explanation: "強度分布とストレス分布の重なり部分から信頼度（強度 ＞ ストレスとなる確率）を評価する手法をストレス・強度モデルと呼びます。"
+  },
+  {
+    category: "第7章",
+    question: "横軸に累積稼働時間、縦軸に累積故障数などをプロットし、修理系システムの故障発生傾向（増加・一定・減少）を視覚的に把握する図を何というか。",
+    options: ["DA図（デュエーンプロット等）", "OS図（順序統計量図）", "バスタブ曲線", "OC曲線"],
+    answer: 0,
+    explanation: "累積稼働時間と累積故障数の関係を示す図（DA図：Data Analysis図）により、システムの信頼性成長や劣化傾向を把握できます。"
+  }
+];
+
+let quizDatabase = JSON.parse(localStorage.getItem("reliabilityQuizDB")) || [...defaultQuizData];
+let currentQuestions = [];
+let currentIndex = 0;
+let score = 0;
+let wrongAnswers = [];
+
+function updateStats() {
+  document.getElementById("total-count").textContent = quizDatabase.length;
+  const c5 = quizDatabase.filter(q => q.category.includes("第5章")).length;
+  const c6 = quizDatabase.filter(q => q.category.includes("第6章")).length;
+  const c7 = quizDatabase.filter(q => q.category.includes("第7章")).length;
+  document.getElementById("chapter-breakdown").textContent = `（第5章: ${c5}問 / 第6章: ${c6}問 / 第7章: ${c7}問）`;
+}
+
+function importQuestions() {
+  const input = document.getElementById("json-input").value.trim();
+  if (!input) {
+    alert("追加するJSONデータを入力してください。");
+    return;
+  }
+  try {
+    const cleaned = input.replace(/,\s*\]$/, "]");
+    const newQuestions = JSON.parse(cleaned);
+    if (!Array.isArray(newQuestions)) {
+      throw new Error("配列形式 [ ... ] である必要があります。");
+    }
+    let addedCount = 0;
+    newQuestions.forEach(item => {
+      if (item.question && Array.isArray(item.options) && typeof item.answer === "number") {
+        quizDatabase.push(item);
+        addedCount++;
+      }
+    });
+    localStorage.setItem("reliabilityQuizDB", JSON.stringify(quizDatabase));
+    updateStats();
+    document.getElementById("json-input").value = "";
+    alert(`${addedCount} 問を追加しました！現在の総問題数：${quizDatabase.length} 問`);
+  } catch (e) {
+    alert("データの形式が正しくありません。\nエラー詳細: " + e.message);
+  }
+}
+
+function resetDatabase() {
+  if (confirm("追加した問題を消去し、初期の30問にリセットしますか？")) {
+    quizDatabase = [...defaultQuizData];
+    localStorage.setItem("reliabilityQuizDB", JSON.stringify(quizDatabase));
+    updateStats();
+    alert("初期データ（30問）にリセットしました。");
+  }
+}
+
+function startQuiz() {
+  const selectedCat = document.getElementById("category-select").value;
+  const num = parseInt(document.getElementById("num-questions").value, 10);
+
+  let pool = quizDatabase;
+  if (selectedCat !== "ALL") {
+    pool = quizDatabase.filter(q => q.category.includes(selectedCat));
+  }
+
+  if (pool.length === 0) {
+    alert("選択した章の問題が登録されていません。");
+    return;
+  }
+
+  const actualNum = Math.min(num, pool.length);
+  const shuffled = [...pool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  currentQuestions = shuffled.slice(0, actualNum);
+  
+  currentIndex = 0;
+  score = 0;
+  wrongAnswers = [];
+  
+  document.getElementById("start-screen").classList.add("hidden");
+  document.getElementById("result-screen").classList.add("hidden");
+  document.getElementById("quiz-screen").classList.remove("hidden");
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = currentQuestions[currentIndex];
+  document.getElementById("q-category").textContent = q.category;
+  document.getElementById("q-progress").textContent = `${currentIndex + 1} / ${currentQuestions.length}`;
+  document.getElementById("q-text").textContent = q.question;
+  document.getElementById("current-score").textContent = score;
+  
+  const optionsContainer = document.getElementById("options-container");
+  optionsContainer.innerHTML = "";
+  
+  const expBox = document.getElementById("explanation-box");
+  expBox.style.display = "none";
+  expBox.innerHTML = "";
+  
+  document.getElementById("next-btn").classList.add("hidden");
+
+  const optionItems = q.options.map((text, idx) => ({
+    text: text,
+    isCorrect: idx === q.answer
+  }));
+  for (let i = optionItems.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [optionItems[i], optionItems[j]] = [optionItems[j], optionItems[i]];
+  }
+
+  optionItems.forEach((optObj, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "option-btn";
+    btn.textContent = `${idx + 1}. ${optObj.text}`;
+    btn.onclick = () => checkAnswer(optObj.isCorrect, btn, optionItems, q);
+    optionsContainer.appendChild(btn);
+  });
+}
+
+function checkAnswer(isCorrect, selectedBtn, optionItems, q) {
+  const buttons = document.querySelectorAll(".option-btn");
+  
+  buttons.forEach((btn, idx) => {
+    btn.disabled = true;
+    if (optionItems[idx].isCorrect) {
+      btn.classList.add("correct");
+    }
+  });
+
+  if (isCorrect) {
+    score++;
+    document.getElementById("current-score").textContent = score;
+  } else {
+    selectedBtn.classList.add("wrong");
+    wrongAnswers.push(q);
+  }
+
+  const expBox = document.getElementById("explanation-box");
+  expBox.innerHTML = `<strong>【解説】</strong><br>${q.explanation || "解説なし"}`;
+  expBox.style.display = "block";
+  
+  const nextBtn = document.getElementById("next-btn");
+  nextBtn.textContent = (currentIndex + 1 < currentQuestions.length) ? "次の問題へ" : "結果を見る";
+  nextBtn.classList.remove("hidden");
+}
+
+function nextQuestion() {
+  currentIndex++;
+  if (currentIndex < currentQuestions.length) {
+    showQuestion();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  document.getElementById("quiz-screen").classList.add("hidden");
+  document.getElementById("result-screen").classList.remove("hidden");
+  document.getElementById("final-score").textContent = score;
+  document.getElementById("final-total").textContent = currentQuestions.length;
+  document.getElementById("final-percent").textContent = Math.round((score / currentQuestions.length) * 100);
+
+  const reviewList = document.getElementById("review-list");
+  if (wrongAnswers.length > 0) {
+    let html = `<h2>間違えた問題の復習（${wrongAnswers.length}問）</h2>`;
+    wrongAnswers.forEach((q, i) => {
+      html += `
+        <div style="background:#fdf2e9; border-left:4px solid #e67e22; padding:12px; margin-bottom:10px; border-radius:4px;">
+          <div style="font-size:0.85rem; color:#d35400; font-weight:bold;">${q.category}</div>
+          <div style="font-weight:bold; margin:4px 0;">Q. ${q.question}</div>
+          <div style="color:#145a32; font-weight:bold;">正解: ${q.options[q.answer]}</div>
+          <div style="font-size:0.9rem; margin-top:4px;">${q.explanation || ""}</div>
+        </div>
+      `;
+    });
+    reviewList.innerHTML = html;
+  } else {
+    reviewList.innerHTML = `<p style="color:#27ae60; font-weight:bold;">全問正解です！素晴らしい成績です。</p>`;
+  }
+}
+
+function backToStart() {
+  document.getElementById("result-screen").classList.add("hidden");
+  document.getElementById("start-screen").classList.remove("hidden");
+  updateStats();
+}
+
+updateStats();
+</script>
+</body>
+</html>
